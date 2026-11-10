@@ -11,7 +11,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     'VIEW_REPORTS',
     'CANCEL_RECEIPTS',
     'SYSTEM_SETTINGS',
-    'MANAGE_USERS'
+    'MANAGE_USERS',
+    'MANAGE_PURCHASE_REQUESTS',
+    'APPROVE_PURCHASE_REQUESTS',
+    'EXECUTE_PURCHASE'
   ],
   WAREHOUSE_MANAGER: [
     'VIEW_DASHBOARD',
@@ -21,7 +24,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     'MANAGE_SUPPLIERS',
     'MANAGE_CUSTOMERS',
     'VIEW_REPORTS',
-    'CANCEL_RECEIPTS'
+    'CANCEL_RECEIPTS',
+    'MANAGE_PURCHASE_REQUESTS'
   ],
   WAREHOUSE_STAFF: [
     'VIEW_DASHBOARD',
@@ -35,7 +39,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     'VIEW_DASHBOARD',
     'VIEW_REPORTS',
     'MANAGE_SUPPLIERS',
-    'MANAGE_CUSTOMERS'
+    'MANAGE_CUSTOMERS',
+    'EXECUTE_PURCHASE'
   ],
   STOCK_IN_STAFF: [
     'VIEW_DASHBOARD',
@@ -95,6 +100,18 @@ export const PERMISSION_LABELS: Record<PermissionKey, { title: string; descripti
   MANAGE_USERS: {
     title: 'Quản lý Người dùng & Mật khẩu',
     description: 'Tạo tài khoản, đổi mật khẩu và phân quyền nhân viên'
+  },
+  MANAGE_PURCHASE_REQUESTS: {
+    title: 'Đề xuất & Nhận vật tư (Quản lý kho)',
+    description: 'Lập đề xuất mua sắm, theo dõi tiến độ và tích xác nhận khi đã nhận được vật tư'
+  },
+  APPROVE_PURCHASE_REQUESTS: {
+    title: 'Phê duyệt đề xuất (Giám đốc)',
+    description: 'Tích duyệt hoặc từ chối các đề xuất mua vật tư từ Quản lý kho'
+  },
+  EXECUTE_PURCHASE: {
+    title: 'Tiếp nhận & Mua vật tư (Kế toán)',
+    description: 'Tiếp nhận đề xuất đã được Giám đốc phê duyệt, liên hệ NCC và đặt mua vật tư'
   }
 };
 

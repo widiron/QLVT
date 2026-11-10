@@ -14,11 +14,11 @@ export const INITIAL_USERS: UserProfile[] = [
     password: 'password123',
     name: 'Nguyễn Văn Hùng',
     role: 'ADMIN',
-    roleLabel: 'Quản trị viên (Admin)',
+    roleLabel: 'Giám đốc / Quản trị viên (Director)',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     color: 'bg-indigo-600',
     phone: '0988.111.222',
-    email: 'admin@khovui.vn',
+    email: 'admin@khomm.vn',
     isActive: true,
     lastLogin: '2026-11-04T08:30:00'
   },
@@ -28,7 +28,7 @@ export const INITIAL_USERS: UserProfile[] = [
     password: 'password123',
     name: 'Trần Thị Thu Hà',
     role: 'WAREHOUSE_MANAGER',
-    roleLabel: 'Trưởng kho (Manager)',
+    roleLabel: 'Quản lý kho (Manager)',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
     color: 'bg-emerald-600',
     phone: '0912.333.444',
@@ -563,3 +563,281 @@ export function generateInitialReceipts(): StockReceipt[] {
 
   return receipts;
 }
+
+export const INITIAL_PURCHASE_REQUESTS: import('../types/inventory').PurchaseRequest[] = [
+  {
+    id: 'pr-001',
+    code: 'DX-20261109-0001',
+    title: 'Đề xuất mua khẩn cấp Bàn phím cơ & Chuột không dây Logitech',
+    reason: 'Tồn kho chạm mức báo động (Bàn phím còn 8 chiếc, Chuột còn 5 chiếc), chuẩn bị trả hàng cho đại lý.',
+    priority: 'URGENT',
+    status: 'PENDING_APPROVAL',
+    requesterId: 'user-manager',
+    requesterName: 'Trần Thị Thu Hà',
+    requesterRole: 'Quản lý kho (Manager)',
+    requestDate: '2026-11-09T09:30:00',
+    totalEstimatedAmount: 35600000,
+    items: [
+      {
+        productId: 'prod-001',
+        sku: 'SKU-LOGI-K380',
+        name: 'Bàn Phím Không Dây Logitech K380 Multi-Device',
+        unit: 'Chiếc',
+        currentStock: 8,
+        requestedQuantity: 50,
+        estimatedUnitPrice: 520000,
+        estimatedAmount: 26000000,
+        supplierName: 'Công Ty TNHH Công Nghệ Á Châu',
+        note: 'Ưu tiên màu Xám Than và Xanh Navy'
+      },
+      {
+        productId: 'prod-002',
+        sku: 'SKU-LOGI-M331',
+        name: 'Chuột Không Dây Silent Logitech M331',
+        unit: 'Chiếc',
+        currentStock: 5,
+        requestedQuantity: 40,
+        estimatedUnitPrice: 240000,
+        estimatedAmount: 9600000,
+        supplierName: 'Công Ty TNHH Công Nghệ Á Châu',
+        note: 'Loại Silent bấm êm'
+      }
+    ],
+    timeline: [
+      {
+        step: 'CREATED',
+        actorName: 'Trần Thị Thu Hà',
+        actorRole: 'Quản lý kho',
+        timestamp: '2026-11-09T09:30:00',
+        actionNote: 'Khởi tạo đề xuất mua bổ sung vật tư do tồn kho chạm ngưỡng tối thiểu.'
+      }
+    ],
+    createdAt: '2026-11-09T09:30:00',
+    updatedAt: '2026-11-09T09:30:00'
+  },
+  {
+    id: 'pr-002',
+    code: 'DX-20261108-0002',
+    title: 'Đề xuất mua bổ sung Nồi chiên không dầu & Ấm siêu tốc Sunhouse',
+    reason: 'Chuẩn bị lượng hàng dự phòng bán lẻ cho chương trình khuyến mãi cuối tháng.',
+    priority: 'NORMAL',
+    status: 'APPROVED',
+    requesterId: 'user-manager',
+    requesterName: 'Trần Thị Thu Hà',
+    requesterRole: 'Quản lý kho (Manager)',
+    requestDate: '2026-11-08T10:15:00',
+    totalEstimatedAmount: 41250000,
+    items: [
+      {
+        productId: 'prod-004',
+        sku: 'SKU-SUN-AF65',
+        name: 'Nồi Chiên Không Dầu Điện Tử Sunhouse 6.5L',
+        unit: 'Cái',
+        currentStock: 15,
+        requestedQuantity: 25,
+        estimatedUnitPrice: 1250000,
+        estimatedAmount: 31250000,
+        supplierName: 'Tổng Kho Phân Phối Gia Dụng SmartHome',
+        note: 'Mẫu mặt kính cảm ứng'
+      },
+      {
+        productId: 'prod-005',
+        sku: 'SKU-PHIL-HD9316',
+        name: 'Ấm Siêu Tốc Inox 304 Philips 1.7L HD9316',
+        unit: 'Cái',
+        currentStock: 12,
+        requestedQuantity: 20,
+        estimatedUnitPrice: 500000,
+        estimatedAmount: 10000000,
+        supplierName: 'Tổng Kho Phân Phối Gia Dụng SmartHome',
+        note: 'Thân inox 2 lớp chống bỏng'
+      }
+    ],
+    approvedBy: 'Nguyễn Văn Hùng',
+    approvedAt: '2026-11-08T14:30:00',
+    directorNote: 'Đã duyệt đề xuất. Kế toán trưởng liên hệ đàm phán lấy chiết khấu thêm 5% từ NCC SmartHome.',
+    timeline: [
+      {
+        step: 'CREATED',
+        actorName: 'Trần Thị Thu Hà',
+        actorRole: 'Quản lý kho',
+        timestamp: '2026-11-08T10:15:00',
+        actionNote: 'Tạo đề xuất chuẩn bị hàng hóa dự phòng.'
+      },
+      {
+        step: 'APPROVED',
+        actorName: 'Nguyễn Văn Hùng',
+        actorRole: 'Giám đốc',
+        timestamp: '2026-11-08T14:30:00',
+        actionNote: 'Giám đốc đã tích phê duyệt đề xuất. Chuyển Kế toán tiến hành mua hàng.'
+      }
+    ],
+    createdAt: '2026-11-08T10:15:00',
+    updatedAt: '2026-11-08T14:30:00'
+  },
+  {
+    id: 'pr-003',
+    code: 'DX-20261106-0003',
+    title: 'Đề xuất mua Ổ cắm điện hẹn giờ thông minh Rạng Đông & Củ sạc Anker',
+    reason: 'Đại lý Bách Hóa Xanh đặt hàng theo hợp đồng giao trong tuần.',
+    priority: 'NORMAL',
+    status: 'ORDERED',
+    requesterId: 'user-manager',
+    requesterName: 'Trần Thị Thu Hà',
+    requesterRole: 'Quản lý kho (Manager)',
+    requestDate: '2026-11-06T08:45:00',
+    totalEstimatedAmount: 23500000,
+    items: [
+      {
+        productId: 'prod-003',
+        sku: 'SKU-ANK-NANO',
+        name: 'Củ Sạc Nhanh 20W Anker PowerPort III Nano',
+        unit: 'Hộp',
+        currentStock: 14,
+        requestedQuantity: 50,
+        estimatedUnitPrice: 230000,
+        estimatedAmount: 11500000,
+        supplierName: 'Công Ty TNHH Công Nghệ Á Châu',
+        note: 'Cổng Type-C'
+      },
+      {
+        productId: 'prod-006',
+        sku: 'SKU-RD-SK01',
+        name: 'Ổ Cắm Hẹn Giờ Điện Tử Rạng Đông Wifi',
+        unit: 'Bộ',
+        currentStock: 9,
+        requestedQuantity: 60,
+        estimatedUnitPrice: 200000,
+        estimatedAmount: 12000000,
+        supplierName: 'Tổng Kho Phân Phối Gia Dụng SmartHome',
+        note: 'Phiên bản kết nối app Smart Life'
+      }
+    ],
+    approvedBy: 'Nguyễn Văn Hùng',
+    approvedAt: '2026-11-06T11:00:00',
+    directorNote: 'Duyệt mua ngay để kịp tiến độ bàn giao cho đối tác Bách Hóa Xanh.',
+    purchasedBy: 'Đặng Quốc Bảo',
+    purchasedAt: '2026-11-06T15:30:00',
+    actualSupplierName: 'Công Ty TNHH Công Nghệ Á Châu',
+    actualInvoiceCode: 'HĐ-ÁCHÂU-88219',
+    actualCostAmount: 22800000,
+    expectedDeliveryDate: '2026-11-10',
+    paymentMethod: 'Chuyển khoản (Đã thanh toán 50% tạm ứng)',
+    accountantNote: 'Đã hoàn tất hợp đồng mua hàng, NCC xác nhận giao hàng đến kho vào ngày 10/11.',
+    timeline: [
+      {
+        step: 'CREATED',
+        actorName: 'Trần Thị Thu Hà',
+        actorRole: 'Quản lý kho',
+        timestamp: '2026-11-06T08:45:00',
+        actionNote: 'Tạo đề xuất theo đơn đặt hàng đối tác.'
+      },
+      {
+        step: 'APPROVED',
+        actorName: 'Nguyễn Văn Hùng',
+        actorRole: 'Giám đốc',
+        timestamp: '2026-11-06T11:00:00',
+        actionNote: 'Giám đốc phê duyệt đề xuất mua hàng.'
+      },
+      {
+        step: 'PURCHASING',
+        actorName: 'Đặng Quốc Bảo',
+        actorRole: 'Kế toán',
+        timestamp: '2026-11-06T13:20:00',
+        actionNote: 'Kế toán tiếp nhận đề xuất, liên hệ báo giá NCC Á Châu.'
+      },
+      {
+        step: 'ORDERED',
+        actorName: 'Đặng Quốc Bảo',
+        actorRole: 'Kế toán',
+        timestamp: '2026-11-06T15:30:00',
+        actionNote: 'Đã xuất hóa đơn đặt hàng HĐ-ÁCHÂU-88219, đang vận chuyển về kho.'
+      }
+    ],
+    createdAt: '2026-11-06T08:45:00',
+    updatedAt: '2026-11-06T15:30:00'
+  },
+  {
+    id: 'pr-004',
+    code: 'DX-20261101-0004',
+    title: 'Đề xuất mua Giấy in hóa đơn nhiệt K80 phi 45 & Mực in tem mã vạch',
+    reason: 'Vật tư đóng gói và in ấn tem nhãn cho kho hàng sắp hết.',
+    priority: 'NORMAL',
+    status: 'RECEIVED',
+    requesterId: 'user-manager',
+    requesterName: 'Trần Thị Thu Hà',
+    requesterRole: 'Quản lý kho (Manager)',
+    requestDate: '2026-11-01T08:30:00',
+    totalEstimatedAmount: 7500000,
+    items: [
+      {
+        name: 'Giấy in nhiệt K80x45mm bọc bạc chống ẩm (Thùng 100 cuộn)',
+        unit: 'Thùng',
+        requestedQuantity: 10,
+        estimatedUnitPrice: 550000,
+        estimatedAmount: 5500000,
+        supplierName: 'Công Ty CP Văn Phòng Phẩm Hồng Hà',
+        note: 'Loại giấy Oji Nhật Bản chữ đen rõ nét',
+        receivedQuantity: 10
+      },
+      {
+        name: 'Decal in nhiệt mã vạch 2 tem 35x22mm (Cuộn 50 mét)',
+        unit: 'Cuộn',
+        requestedQuantity: 20,
+        estimatedUnitPrice: 100000,
+        estimatedAmount: 2000000,
+        supplierName: 'Công Ty CP Văn Phòng Phẩm Hồng Hà',
+        note: 'Keo dính tốt',
+        receivedQuantity: 20
+      }
+    ],
+    approvedBy: 'Nguyễn Văn Hùng',
+    approvedAt: '2026-11-01T10:00:00',
+    directorNote: 'Duyệt mua vật tư phục vụ hoạt động đóng gói kho.',
+    purchasedBy: 'Đặng Quốc Bảo',
+    purchasedAt: '2026-11-01T14:00:00',
+    actualSupplierName: 'Công Ty CP Văn Phòng Phẩm Hồng Hà',
+    actualInvoiceCode: 'HH-VPP-2026-1101',
+    actualCostAmount: 7200000,
+    expectedDeliveryDate: '2026-11-02',
+    paymentMethod: 'Chuyển khoản 100%',
+    accountantNote: 'Đã thanh toán chuyển khoản qua ngân hàng MB Bank.',
+    receivedBy: 'Trần Thị Thu Hà',
+    receivedAt: '2026-11-02T16:00:00',
+    receiverNote: 'Đã nhận đủ 10 thùng giấy K80 và 20 cuộn tem decal mã vạch, hàng nguyên đai nguyên kiện chất lượng tốt.',
+    createdReceiptCode: 'PN-20261102-0001',
+    timeline: [
+      {
+        step: 'CREATED',
+        actorName: 'Trần Thị Thu Hà',
+        actorRole: 'Quản lý kho',
+        timestamp: '2026-11-01T08:30:00',
+        actionNote: 'Tạo đề xuất mua vật tư kho.'
+      },
+      {
+        step: 'APPROVED',
+        actorName: 'Nguyễn Văn Hùng',
+        actorRole: 'Giám đốc',
+        timestamp: '2026-11-01T10:00:00',
+        actionNote: 'Giám đốc phê duyệt đề xuất.'
+      },
+      {
+        step: 'ORDERED',
+        actorName: 'Đặng Quốc Bảo',
+        actorRole: 'Kế toán',
+        timestamp: '2026-11-01T14:00:00',
+        actionNote: 'Kế toán hoàn tất đặt mua và thanh toán cho NCC Hồng Hà.'
+      },
+      {
+        step: 'RECEIVED',
+        actorName: 'Trần Thị Thu Hà',
+        actorRole: 'Quản lý kho',
+        timestamp: '2026-11-02T16:00:00',
+        actionNote: 'Quản lý kho đã nhận đủ vật tư và tích thông báo hoàn tất.'
+      }
+    ],
+    createdAt: '2026-11-01T08:30:00',
+    updatedAt: '2026-11-02T16:00:00'
+  }
+];
+

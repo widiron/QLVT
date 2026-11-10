@@ -13,7 +13,9 @@ import {
   CircleAlert,
   Save,
   LogOut,
-  KeyRound
+  KeyRound,
+  Cloud,
+  ClipboardList
 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 
@@ -24,10 +26,12 @@ export const Sidebar: React.FC = () => {
     products,
     currentUser,
     settings,
+    googleUser,
     exportHtmlStandalone,
     hasPermission,
     logout,
-    setIsChangePasswordOpen
+    setIsChangePasswordOpen,
+    purchaseRequests
   } = useInventory();
 
   // Đếm cảnh báo tồn kho
@@ -41,8 +45,23 @@ export const Sidebar: React.FC = () => {
   const canCustomers = hasPermission('MANAGE_CUSTOMERS');
   const canReports = hasPermission('VIEW_REPORTS');
   const canSettings = hasPermission('SYSTEM_SETTINGS') || hasPermission('MANAGE_USERS');
+  const canProcurement = hasPermission('MANAGE_PURCHASE_REQUESTS') || hasPermission('APPROVE_PURCHASE_REQUESTS') || hasPermission('EXECUTE_PURCHASE') || currentUser.role === 'ADMIN';
 
-  const hasWarehouseSection = canStockIn || canStockOut || canProducts || canSuppliers || canCustomers;
+  // Badge notification for procurement based on role
+  const procurementPendingCount = React.useMemo(() => {
+    if (currentUser.role === 'ADMIN') {
+      return purchaseRequests.filter(r => r.status === 'PENDING_APPROVAL').length;
+    }
+    if (currentUser.role === 'ACCOUNTANT') {
+      return purchaseRequests.filter(r => r.status === 'APPROVED').length;
+    }
+    if (currentUser.role === 'WAREHOUSE_MANAGER') {
+      return purchaseRequests.filter(r => r.status === 'ORDERED').length;
+    }
+    return purchaseRequests.filter(r => r.status !== 'RECEIVED' && r.status !== 'REJECTED').length;
+  }, [purchaseRequests, currentUser.role]);
+
+  const hasWarehouseSection = canStockIn || canStockOut || canProducts || canSuppliers || canCustomers || canProcurement;
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-200 flex flex-col shrink-0 border-r border-slate-800 select-none">
@@ -102,6 +121,31 @@ export const Sidebar: React.FC = () => {
               <span>NGHIỆP VỤ KHO</span>
             </div>
             <nav className="space-y-1">
+              {canProcurement && (
+                <button
+                  onClick={() => setCurrentTab('procurement')}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    currentTab === 'procurement'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <ClipboardList className="w-4 h-4 text-violet-400" />
+                    <span>Mua vật tư</span>
+                  </div>
+                  {procurementPendingCount > 0 ? (
+                    <span className="bg-amber-500 text-slate-950 text-xs font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                      {procurementPendingCount}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono">
+                      Quy trình
+                    </span>
+                  )}
+                </button>
+              )}
+
               {canStockIn && (
                 <button
                   onClick={() => setCurrentTab('stock-in')}
@@ -231,6 +275,27 @@ export const Sidebar: React.FC = () => {
               >
                 <Settings className="w-4 h-4 text-slate-400" />
                 <span>Cài đặt & Dữ liệu</span>
+              </button>
+
+              <button
+                onClick={() => setCurrentTab('sheets')}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  currentTab === 'sheets'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Cloud className="w-4 h-4 text-emerald-400" />
+                  <span>Google Sheets & Mây</span>
+                </div>
+                {googleUser ? (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Google đã kết nối"></span>
+                ) : (
+                  <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono">
+                    Sheets
+                  </span>
+                )}
               </button>
 
               {/* Quick HTML Standalone Save button */}

@@ -412,12 +412,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenNewReceipt }
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => onOpenNewReceipt('IN')}
-                      className="px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg border border-emerald-200 shrink-0 transition-colors"
-                    >
-                      + Nhập hàng
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => setCurrentTab('procurement')}
+                        className="px-2 py-1 text-[11px] font-semibold bg-violet-50 text-violet-700 hover:bg-violet-100 rounded-lg border border-violet-200 transition-colors"
+                        title="Lập đề xuất mua vật tư này"
+                      >
+                        Đề xuất mua
+                      </button>
+                      <button
+                        onClick={() => onOpenNewReceipt('IN')}
+                        className="px-2 py-1 text-[11px] font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors"
+                      >
+                        + Nhập kho
+                      </button>
+                    </div>
                   </div>
                 );
               })

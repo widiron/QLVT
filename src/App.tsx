@@ -19,6 +19,8 @@ import { ReceiptDetailModal } from './components/Modals/ReceiptDetailModal';
 import { Product, Supplier, Customer } from './types/inventory';
 import { LoginScreen } from './components/Auth/LoginScreen';
 import { ChangePasswordModal } from './components/Modals/ChangePasswordModal';
+import { GoogleSheetsView } from './components/GoogleSheets/GoogleSheetsView';
+import { PurchaseRequestsView } from './components/Procurement/PurchaseRequestsView';
 
 function AppContent() {
   const { currentTab, setCurrentTab, isLoggedIn } = useInventory();
@@ -132,6 +134,14 @@ function AppContent() {
 
             {currentTab === 'settings' && (
               <SettingsView />
+            )}
+
+            {currentTab === 'procurement' && (
+              <PurchaseRequestsView />
+            )}
+
+            {currentTab === 'sheets' && (
+              <GoogleSheetsView />
             )}
           </div>
         </main>

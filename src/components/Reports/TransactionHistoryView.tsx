@@ -20,7 +20,8 @@ export const TransactionHistoryView: React.FC = () => {
     receipts,
     setPrintReceipt,
     setDetailReceipt,
-    cancelStockReceipt
+    cancelStockReceipt,
+    setCurrentTab
   } = useInventory();
 
   // Filters
@@ -92,8 +93,8 @@ export const TransactionHistoryView: React.FC = () => {
           </p>
         </div>
 
-        {/* Quick summary tags */}
-        <div className="flex flex-wrap items-center gap-3 text-xs">
+        {/* Quick summary tags and Google Sheets action */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           <div className="px-3 py-1.5 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-200 font-medium">
             Nhập: <strong className="font-bold">{formatVND(totalInAmount)}</strong>
           </div>
@@ -101,8 +102,16 @@ export const TransactionHistoryView: React.FC = () => {
             Xuất: <strong className="font-bold">{formatVND(totalOutAmount)}</strong>
           </div>
           <div className="px-3 py-1.5 bg-indigo-50 text-indigo-800 rounded-lg border border-indigo-200 font-medium">
-            Lãi gộp: <strong className="font-bold">{formatVND(totalGrossProfit)}</strong>
+            Lãi: <strong className="font-bold">{formatVND(totalGrossProfit)}</strong>
           </div>
+          <button
+            onClick={() => setCurrentTab('sheets')}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-xs transition-colors cursor-pointer"
+            title="Đồng bộ phiếu sang Google Sheets"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Đồng Bộ Sheets</span>
+          </button>
         </div>
       </div>
 

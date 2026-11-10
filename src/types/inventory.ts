@@ -102,7 +102,10 @@ export type PermissionKey =
   | 'VIEW_REPORTS'
   | 'CANCEL_RECEIPTS'
   | 'SYSTEM_SETTINGS'
-  | 'MANAGE_USERS';
+  | 'MANAGE_USERS'
+  | 'MANAGE_PURCHASE_REQUESTS'
+  | 'APPROVE_PURCHASE_REQUESTS'
+  | 'EXECUTE_PURCHASE';
 
 export interface UserProfile {
   id: string;
@@ -140,6 +143,9 @@ export interface WarehouseSettings {
     accountant: string;
     receiver: string;
   };
+  connectedSpreadsheetId?: string;
+  connectedSpreadsheetTitle?: string;
+  lastSheetsSyncTime?: string;
 }
 
 export interface XNTReportRow {
@@ -200,3 +206,81 @@ export interface DashboardMetrics {
   warningProducts: Product[];
   recentReceipts: StockReceipt[];
 }
+
+export type PurchaseRequestStatus =
+  | 'PENDING_APPROVAL' // Quản lý kho đã tạo -> Chờ Giám đốc phê duyệt
+  | 'APPROVED'         // Giám đốc đã phê duyệt -> Chờ Kế toán mua hàng
+  | 'REJECTED'         // Giám đốc từ chối
+  | 'IN_PURCHASING'    // Kế toán đã tiếp nhận xử lý đặt hàng
+  | 'ORDERED'          // Kế toán đã mua / đặt hàng NCC -> Đang vận chuyển về kho
+  | 'RECEIVED';        // Quản lý kho đã tích nhận vật tư -> Hoàn tất quy trình
+
+export type PurchasePriority = 'NORMAL' | 'URGENT' | 'BACKUP';
+
+export interface PurchaseRequestItem {
+  productId?: string;
+  sku?: string;
+  name: string;
+  unit: string;
+  currentStock?: number;
+  requestedQuantity: number;
+  estimatedUnitPrice: number;
+  estimatedAmount: number;
+  supplierName?: string;
+  note?: string;
+  receivedQuantity?: number;
+}
+
+export interface PurchaseRequestTimelineEvent {
+  step: 'CREATED' | 'APPROVED' | 'REJECTED' | 'PURCHASING' | 'ORDERED' | 'RECEIVED';
+  actorName: string;
+  actorRole: string;
+  timestamp: string;
+  actionNote?: string;
+}
+
+export interface PurchaseRequest {
+  id: string;
+  code: string; // DX-YYYYMMDD-XXXX
+  title: string;
+  reason: string;
+  priority: PurchasePriority;
+  status: PurchaseRequestStatus;
+  
+  // Bước 1: Người đề xuất (Quản lý kho)
+  requesterId: string;
+  requesterName: string;
+  requesterRole: string;
+  requestDate: string;
+  
+  // Danh sách vật tư
+  items: PurchaseRequestItem[];
+  totalEstimatedAmount: number;
+
+  // Bước 2: Giám đốc phê duyệt
+  approvedBy?: string;
+  approvedAt?: string;
+  directorNote?: string;
+
+  // Bước 3: Kế toán mua hàng
+  purchasedBy?: string;
+  purchasedAt?: string;
+  actualSupplierName?: string;
+  actualInvoiceCode?: string;
+  actualCostAmount?: number;
+  expectedDeliveryDate?: string;
+  paymentMethod?: string;
+  accountantNote?: string;
+
+  // Bước 4: Quản lý kho nhận vật tư
+  receivedBy?: string;
+  receivedAt?: string;
+  receiverNote?: string;
+  createdReceiptCode?: string;
+
+  // Lịch sử tiến trình
+  timeline: PurchaseRequestTimelineEvent[];
+  createdAt: string;
+  updatedAt: string;
+}
+

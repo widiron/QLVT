@@ -13,7 +13,8 @@ import {
   MapPin,
   AlertTriangle,
   CheckCircle2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useInventory } from '../../context/InventoryContext';
 import { Product, ProductCategory } from '../../types/inventory';
@@ -36,7 +37,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     updateProduct,
     deleteProduct,
     setBarcodeProduct,
-    addToast
+    addToast,
+    setCurrentTab
   } = useInventory();
 
   // Filters
@@ -187,13 +189,24 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Thêm Sản Phẩm Mới</span>
-        </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => setCurrentTab('sheets')}
+            className="flex items-center gap-2 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            title="Mở trung tâm đồng bộ Google Sheets"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span>Google Sheets</span>
+          </button>
+
+          <button
+            onClick={openCreateModal}
+            className="flex items-center gap-2 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Thêm Sản Phẩm Mới</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}

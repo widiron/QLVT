@@ -7,9 +7,19 @@ import {
   WarehouseSettings,
   UserProfile,
   ReceiptItem,
-  PermissionKey
+  PermissionKey,
+  PurchaseRequest
 } from '../types/inventory';
+import confetti from 'canvas-confetti';
 import { checkUserPermission } from '../utils/auth';
+import { User } from 'firebase/auth';
+import {
+  initGoogleAuth,
+  googleSignIn,
+  googleSignOut,
+  getAccessToken
+} from '../utils/googleAuth';
+import { ParsedSheetProduct } from '../utils/googleSheets';
 import {
   loadStoredData,
   saveAllDataToStorage,
@@ -43,11 +53,12 @@ interface InventoryContextType {
   settings: WarehouseSettings;
   users: UserProfile[];
   currentUser: UserProfile;
+  purchaseRequests: PurchaseRequest[];
   toasts: ToastMessage[];
   
   // Modals & Navigation
-  currentTab: 'dashboard' | 'stock-in' | 'stock-out' | 'products' | 'suppliers' | 'customers' | 'history' | 'xnt' | 'settings';
-  setCurrentTab: (tab: 'dashboard' | 'stock-in' | 'stock-out' | 'products' | 'suppliers' | 'customers' | 'history' | 'xnt' | 'settings') => void;
+  currentTab: 'dashboard' | 'stock-in' | 'stock-out' | 'products' | 'suppliers' | 'customers' | 'history' | 'xnt' | 'settings' | 'sheets' | 'procurement';
+  setCurrentTab: (tab: 'dashboard' | 'stock-in' | 'stock-out' | 'products' | 'suppliers' | 'customers' | 'history' | 'xnt' | 'settings' | 'sheets' | 'procurement') => void;
   
   // Modal states
   printReceipt: StockReceipt | null;
@@ -78,7 +89,7 @@ interface InventoryContextType {
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
   removeToast: (id: string) => void;
   setCurrentUser: (user: UserProfile) => void;
-  updateSettings: (settings: WarehouseSettings) => void;
+  updateSettings: (settings: Partial<WarehouseSettings>) => void;
   
   // Product CRUD
   addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Product;
@@ -123,6 +134,42 @@ interface InventoryContextType {
   exportHtmlStandalone: () => void;
   resetToSampleData: () => void;
   clearAllData: () => void;
+
+  // Google Workspace & Sheets Integration
+  googleUser: User | null;
+  googleAccessToken: string | null;
+  isGoogleConnecting: boolean;
+  signInGoogle: () => Promise<boolean>;
+  signOutGoogle: () => Promise<void>;
+  importProductsFromParsedSheet: (
+    items: ParsedSheetProduct[],
+    options: { updateExistingStock: boolean; addNewProducts: boolean }
+  ) => { added: number; updated: number };
+
+  // Quy trình Đề xuất Mua Vật tư (Procurement Workflow)
+  createPurchaseRequest: (data: {
+    title: string;
+    reason: string;
+    priority: import('../types/inventory').PurchasePriority;
+    items: import('../types/inventory').PurchaseRequestItem[];
+  }) => PurchaseRequest;
+  approvePurchaseRequest: (id: string, directorNote?: string) => void;
+  rejectPurchaseRequest: (id: string, reason: string) => void;
+  receiveForPurchasing: (id: string, accountantNote?: string) => void;
+  orderPurchaseRequest: (id: string, details: {
+    actualSupplierName: string;
+    actualInvoiceCode?: string;
+    actualCostAmount?: number;
+    expectedDeliveryDate?: string;
+    paymentMethod?: string;
+    accountantNote?: string;
+  }) => void;
+  markMaterialsReceived: (id: string, details?: {
+    receiverNote?: string;
+    autoCreateStockInReceipt?: boolean;
+    receivedItems?: { name: string; receivedQuantity: number }[];
+  }) => void;
+  deletePurchaseRequest: (id: string) => void;
 }
 
 const InventoryContext = createContext<InventoryContextType | null>(null);
@@ -138,8 +185,14 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [currentUser, setCurrentUserState] = useState<UserProfile>(initial.currentUser);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(initial.isLoggedIn ?? false);
   
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'stock-in' | 'stock-out' | 'products' | 'suppliers' | 'customers' | 'history' | 'xnt' | 'settings'>('dashboard');
+  const [purchaseRequests, setPurchaseRequests] = useState<PurchaseRequest[]>(initial.purchaseRequests || []);
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'stock-in' | 'stock-out' | 'products' | 'suppliers' | 'customers' | 'history' | 'xnt' | 'settings' | 'sheets' | 'procurement'>('dashboard');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Google Workspace & Sheets state
+  const [googleUser, setGoogleUser] = useState<User | null>(null);
+  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
+  const [isGoogleConnecting, setIsGoogleConnecting] = useState<boolean>(false);
   
   // Modals
   const [printReceipt, setPrintReceipt] = useState<StockReceipt | null>(null);
@@ -213,9 +266,29 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
       settings,
       users,
       currentUser,
+      purchaseRequests,
       isLoggedIn
     });
-  }, [products, suppliers, customers, receipts, settings, users, currentUser, isLoggedIn]);
+  }, [products, suppliers, customers, receipts, settings, users, currentUser, purchaseRequests, isLoggedIn]);
+
+  // Google Workspace Auth listener
+  useEffect(() => {
+    const unsubscribe = initGoogleAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        setGoogleAccessToken(token);
+      },
+      () => {
+        setGoogleUser(null);
+        setGoogleAccessToken(null);
+      }
+    );
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   // Phím tắt bàn phím toàn cục: Ctrl + S để lưu tệp HTML độc lập
   useEffect(() => {
@@ -467,8 +540,8 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
     });
   }, [addToast]);
 
-  const updateSettings = useCallback((newSettings: WarehouseSettings) => {
-    setSettings(newSettings);
+  const updateSettings = useCallback((newSettings: Partial<WarehouseSettings>) => {
+    setSettings(prev => ({ ...prev, ...newSettings }));
     addToast({
       type: 'success',
       title: 'Đã cập nhật cài đặt hệ thống',
@@ -886,6 +959,445 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
     notifyOtherTabs('Kho hàng vừa được làm trống.');
   }, [addToast, notifyOtherTabs]);
 
+  // Google Workspace Handlers
+  const signInGoogle = useCallback(async (): Promise<boolean> => {
+    setIsGoogleConnecting(true);
+    try {
+      const res = await googleSignIn();
+      setGoogleUser(res.user);
+      setGoogleAccessToken(res.accessToken);
+      addToast({
+        type: 'success',
+        title: 'Kết nối Google thành công',
+        message: `Đã kết nối tài khoản ${res.user.displayName || res.user.email} với quyền truy cập Google Sheets.`
+      });
+      return true;
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Lỗi kết nối Google Workspace.';
+      addToast({
+        type: 'error',
+        title: 'Kết nối thất bại',
+        message: errorMsg
+      });
+      return false;
+    } finally {
+      setIsGoogleConnecting(false);
+    }
+  }, [addToast]);
+
+  const signOutGoogle = useCallback(async () => {
+    try {
+      await googleSignOut();
+      setGoogleUser(null);
+      setGoogleAccessToken(null);
+      addToast({
+        type: 'info',
+        title: 'Đã ngắt kết nối Google',
+        message: 'Đã đóng phiên làm việc với Google Sheets.'
+      });
+    } catch (err: unknown) {
+      console.error('Logout error:', err);
+    }
+  }, [addToast]);
+
+  const importProductsFromParsedSheet = useCallback(
+    (
+      items: ParsedSheetProduct[],
+      options: { updateExistingStock: boolean; addNewProducts: boolean }
+    ) => {
+      let added = 0;
+      let updated = 0;
+
+      setProducts(prevProducts => {
+        const nextProducts = [...prevProducts];
+
+        items.forEach(item => {
+          if (!item.isValid) return;
+
+          const existingIndex = nextProducts.findIndex(
+            p =>
+              (item.sku && p.sku.toLowerCase() === item.sku.toLowerCase()) ||
+              (item.barcode && p.barcode.toLowerCase() === item.barcode.toLowerCase())
+          );
+
+          if (existingIndex !== -1) {
+            if (options.updateExistingStock) {
+              nextProducts[existingIndex] = {
+                ...nextProducts[existingIndex],
+                name: item.name || nextProducts[existingIndex].name,
+                unit: item.unit || nextProducts[existingIndex].unit,
+                category: (item.category as any) || nextProducts[existingIndex].category,
+                costPrice: item.costPrice > 0 ? item.costPrice : nextProducts[existingIndex].costPrice,
+                sellingPrice: item.sellingPrice > 0 ? item.sellingPrice : nextProducts[existingIndex].sellingPrice,
+                currentStock: item.currentStock,
+                minStock: item.minStock > 0 ? item.minStock : nextProducts[existingIndex].minStock,
+                location: item.location || nextProducts[existingIndex].location,
+                updatedAt: new Date().toISOString()
+              };
+              updated++;
+            }
+          } else if (options.addNewProducts) {
+            const newProd: Product = {
+              id: `prod-gs-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              sku: item.sku,
+              barcode: item.barcode || item.sku,
+              name: item.name,
+              category: (item.category as any) || 'Khác',
+              unit: item.unit || 'Cái',
+              costPrice: item.costPrice || 0,
+              sellingPrice: item.sellingPrice || 0,
+              currentStock: item.currentStock || 0,
+              minStock: item.minStock || 5,
+              location: item.location || '',
+              image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=150&auto=format&fit=crop&q=60',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+            nextProducts.push(newProd);
+            added++;
+          }
+        });
+
+        return nextProducts;
+      });
+
+      notifyOtherTabs('Dữ liệu sản phẩm vừa được nạp từ Google Sheets.');
+      return { added, updated };
+    },
+    [notifyOtherTabs]
+  );
+
+  // ===================== QUY TRÌNH ĐỀ XUẤT MUA VẬT TƯ =====================
+
+  // 1. Quản lý kho tạo đề xuất mua vật tư
+  const createPurchaseRequest = useCallback((data: {
+    title: string;
+    reason: string;
+    priority: import('../types/inventory').PurchasePriority;
+    items: import('../types/inventory').PurchaseRequestItem[];
+  }): PurchaseRequest => {
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const randomHex = Math.floor(1000 + Math.random() * 9000);
+    const code = `DX-${dateStr}-${randomHex}`;
+    const id = `pr-${Date.now()}`;
+
+    const totalEstimatedAmount = data.items.reduce(
+      (sum, item) => sum + (item.estimatedAmount || item.requestedQuantity * item.estimatedUnitPrice),
+      0
+    );
+
+    const newReq: PurchaseRequest = {
+      id,
+      code,
+      title: data.title,
+      reason: data.reason,
+      priority: data.priority,
+      status: 'PENDING_APPROVAL',
+      requesterId: currentUser.id,
+      requesterName: currentUser.name,
+      requesterRole: currentUser.roleLabel,
+      requestDate: now.toISOString(),
+      items: data.items,
+      totalEstimatedAmount,
+      timeline: [
+        {
+          step: 'CREATED',
+          actorName: currentUser.name,
+          actorRole: currentUser.roleLabel,
+          timestamp: now.toISOString(),
+          actionNote: `Quản lý kho đã tạo đề xuất mua ${data.items.length} hạng mục vật tư, dự kiến: ${new Intl.NumberFormat('vi-VN').format(totalEstimatedAmount)} đ.`
+        }
+      ],
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString()
+    };
+
+    setPurchaseRequests(prev => [newReq, ...prev]);
+    playSuccessBeep();
+    addToast({
+      type: 'success',
+      title: 'Đã gửi đề xuất mua vật tư!',
+      message: `Mã đề xuất ${code} đã được gửi tới Giám đốc để phê duyệt.`
+    });
+    notifyOtherTabs(`Đề xuất mua vật tư mới ${code} vừa được khởi tạo.`);
+    return newReq;
+  }, [currentUser, addToast, notifyOtherTabs]);
+
+  // 2. Giám đốc tích phê duyệt đề xuất
+  const approvePurchaseRequest = useCallback((id: string, directorNote?: string) => {
+    const now = new Date();
+    setPurchaseRequests(prev => prev.map(req => {
+      if (req.id !== id) return req;
+      return {
+        ...req,
+        status: 'APPROVED',
+        approvedBy: currentUser.name,
+        approvedAt: now.toISOString(),
+        directorNote: directorNote || req.directorNote || 'Giám đốc đã phê duyệt đề xuất.',
+        timeline: [
+          ...req.timeline,
+          {
+            step: 'APPROVED',
+            actorName: currentUser.name,
+            actorRole: currentUser.roleLabel,
+            timestamp: now.toISOString(),
+            actionNote: directorNote
+              ? `Giám đốc đã phê duyệt: "${directorNote}"`
+              : 'Giám đốc đã tích phê duyệt đề xuất mua vật tư. Chờ Kế toán tiến hành mua hàng.'
+          }
+        ],
+        updatedAt: now.toISOString()
+      };
+    }));
+
+    playSuccessBeep();
+    addToast({
+      type: 'success',
+      title: 'Giám đốc đã phê duyệt đề xuất!',
+      message: 'Đề xuất đã chuyển sang bộ phận Kế toán để tiếp nhận và đặt mua vật tư.'
+    });
+    notifyOtherTabs('Đề xuất mua vật tư vừa được Giám đốc phê duyệt.');
+  }, [currentUser, addToast, notifyOtherTabs]);
+
+  // 2b. Giám đốc từ chối đề xuất
+  const rejectPurchaseRequest = useCallback((id: string, reason: string) => {
+    const now = new Date();
+    setPurchaseRequests(prev => prev.map(req => {
+      if (req.id !== id) return req;
+      return {
+        ...req,
+        status: 'REJECTED',
+        approvedBy: currentUser.name,
+        approvedAt: now.toISOString(),
+        directorNote: `Từ chối: ${reason}`,
+        timeline: [
+          ...req.timeline,
+          {
+            step: 'REJECTED',
+            actorName: currentUser.name,
+            actorRole: currentUser.roleLabel,
+            timestamp: now.toISOString(),
+            actionNote: `Giám đốc không duyệt đề xuất: "${reason}"`
+          }
+        ],
+        updatedAt: now.toISOString()
+      };
+    }));
+
+    playErrorBeep();
+    addToast({
+      type: 'warning',
+      title: 'Đã từ chối đề xuất mua',
+      message: `Lý do: ${reason}`
+    });
+    notifyOtherTabs('Đề xuất mua vật tư đã bị từ chối.');
+  }, [currentUser, addToast, notifyOtherTabs]);
+
+  // 3a. Kế toán tiếp nhận đề xuất đã duyệt
+  const receiveForPurchasing = useCallback((id: string, accountantNote?: string) => {
+    const now = new Date();
+    setPurchaseRequests(prev => prev.map(req => {
+      if (req.id !== id) return req;
+      return {
+        ...req,
+        status: 'IN_PURCHASING',
+        purchasedBy: currentUser.name,
+        accountantNote: accountantNote || 'Kế toán đang tiến hành khảo giá và liên hệ nhà cung cấp.',
+        timeline: [
+          ...req.timeline,
+          {
+            step: 'PURCHASING',
+            actorName: currentUser.name,
+            actorRole: currentUser.roleLabel,
+            timestamp: now.toISOString(),
+            actionNote: accountantNote || 'Kế toán đã tiếp nhận đề xuất và đang tiến hành mua vật tư.'
+          }
+        ],
+        updatedAt: now.toISOString()
+      };
+    }));
+
+    addToast({
+      type: 'info',
+      title: 'Kế toán đã tiếp nhận đề xuất',
+      message: 'Bắt đầu quá trình đặt mua vật tư từ nhà cung cấp.'
+    });
+    notifyOtherTabs('Kế toán đã tiếp nhận đề xuất mua hàng.');
+  }, [currentUser, addToast, notifyOtherTabs]);
+
+  // 3b. Kế toán xác nhận đặt mua vật tư
+  const orderPurchaseRequest = useCallback((id: string, details: {
+    actualSupplierName: string;
+    actualInvoiceCode?: string;
+    actualCostAmount?: number;
+    expectedDeliveryDate?: string;
+    paymentMethod?: string;
+    accountantNote?: string;
+  }) => {
+    const now = new Date();
+    setPurchaseRequests(prev => prev.map(req => {
+      if (req.id !== id) return req;
+      return {
+        ...req,
+        status: 'ORDERED',
+        purchasedBy: currentUser.name,
+        purchasedAt: now.toISOString(),
+        actualSupplierName: details.actualSupplierName,
+        actualInvoiceCode: details.actualInvoiceCode,
+        actualCostAmount: details.actualCostAmount || req.totalEstimatedAmount,
+        expectedDeliveryDate: details.expectedDeliveryDate,
+        paymentMethod: details.paymentMethod || 'Chuyển khoản',
+        accountantNote: details.accountantNote,
+        timeline: [
+          ...req.timeline,
+          {
+            step: 'ORDERED',
+            actorName: currentUser.name,
+            actorRole: currentUser.roleLabel,
+            timestamp: now.toISOString(),
+            actionNote: `Kế toán đã đặt mua từ NCC "${details.actualSupplierName}"${details.actualInvoiceCode ? ` (Mã ĐH/HĐ: ${details.actualInvoiceCode})` : ''}. Dự kiến giao: ${details.expectedDeliveryDate || 'Đang vận chuyển'}.`
+          }
+        ],
+        updatedAt: now.toISOString()
+      };
+    }));
+
+    playSuccessBeep();
+    addToast({
+      type: 'success',
+      title: 'Kế toán đã đặt mua vật tư!',
+      message: `Đã xác nhận mua hàng từ NCC "${details.actualSupplierName}". Đang chờ Quản lý kho tiếp nhận hàng.`
+    });
+    notifyOtherTabs('Vật tư đề xuất đã được Kế toán đặt mua.');
+  }, [currentUser, addToast, notifyOtherTabs]);
+
+  // 4. Quản lý kho nhận vật tư & tích thông báo
+  const markMaterialsReceived = useCallback((id: string, details?: {
+    receiverNote?: string;
+    autoCreateStockInReceipt?: boolean;
+    receivedItems?: { name: string; receivedQuantity: number }[];
+  }) => {
+    const now = new Date();
+    let generatedReceiptCode = '';
+
+    setPurchaseRequests(prev => prev.map(req => {
+      if (req.id !== id) return req;
+
+      // Tự động tạo Phiếu Nhập Kho nếu được chọn (Mặc định: có)
+      if (details?.autoCreateStockInReceipt !== false) {
+        const dateCode = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+        const randomReceiptId = Math.floor(1000 + Math.random() * 9000);
+        generatedReceiptCode = `PN-${dateCode}-${randomReceiptId}`;
+
+        const receiptItems: ReceiptItem[] = req.items.map(item => {
+          const matchedReceived = details?.receivedItems?.find(ri => ri.name === item.name);
+          const qty = matchedReceived ? matchedReceived.receivedQuantity : (item.receivedQuantity || item.requestedQuantity);
+          const cost = item.estimatedUnitPrice || 0;
+          return {
+            productId: item.productId || `prod-mat-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            sku: item.sku || `VT-${Date.now().toString().slice(-4)}`,
+            productName: item.name,
+            barcode: item.sku || `893000${Math.floor(100000 + Math.random() * 900000)}`,
+            unit: item.unit,
+            quantity: qty,
+            unitPrice: cost,
+            costPrice: cost,
+            total: qty * cost
+          };
+        });
+
+        const totalQty = receiptItems.reduce((sum, i) => sum + i.quantity, 0);
+        const totalAmt = receiptItems.reduce((sum, i) => sum + i.total, 0);
+
+        const newStockReceipt: StockReceipt = {
+          id: `receipt-in-${Date.now()}`,
+          code: generatedReceiptCode,
+          type: 'IN',
+          date: now.toISOString(),
+          partnerName: req.actualSupplierName || req.items[0]?.supplierName || 'Nhà Cung Cấp Vật Tư',
+          warehouseName: settings.warehouseName,
+          note: `Nhập kho tự động từ Đề xuất mua vật tư ${req.code}. ${details?.receiverNote || ''}`,
+          items: receiptItems,
+          totalQuantity: totalQty,
+          totalAmount: req.actualCostAmount || totalAmt,
+          createdBy: currentUser.name,
+          userRole: currentUser.role,
+          status: 'COMPLETED',
+          createdAt: now.toISOString()
+        };
+
+        setReceipts(prevR => [newStockReceipt, ...prevR]);
+
+        // Cập nhật tồn kho sản phẩm nếu có
+        setProducts(prevProducts => {
+          return prevProducts.map(p => {
+            const matchedItem = req.items.find(item => item.productId === p.id || (item.sku && item.sku === p.sku));
+            if (matchedItem) {
+              const matchedReceived = details?.receivedItems?.find(ri => ri.name === matchedItem.name);
+              const addQty = matchedReceived ? matchedReceived.receivedQuantity : (matchedItem.receivedQuantity || matchedItem.requestedQuantity);
+              return {
+                ...p,
+                currentStock: p.currentStock + addQty,
+                updatedAt: now.toISOString()
+              };
+            }
+            return p;
+          });
+        });
+      }
+
+      return {
+        ...req,
+        status: 'RECEIVED',
+        receivedBy: currentUser.name,
+        receivedAt: now.toISOString(),
+        receiverNote: details?.receiverNote || 'Quản lý kho đã nhận đủ số lượng vật tư, hàng hóa đạt chuẩn.',
+        createdReceiptCode: generatedReceiptCode || req.createdReceiptCode,
+        timeline: [
+          ...req.timeline,
+          {
+            step: 'RECEIVED',
+            actorName: currentUser.name,
+            actorRole: currentUser.roleLabel,
+            timestamp: now.toISOString(),
+            actionNote: `Quản lý kho đã nhận được vật tư.${generatedReceiptCode ? ` Đã tự động tạo Phiếu Nhập Kho ${generatedReceiptCode} và cộng tồn kho.` : ''} Hoàn tất quy trình.`
+          }
+        ],
+        updatedAt: now.toISOString()
+      };
+    }));
+
+    playSuccessBeep();
+    try {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    } catch {
+      // ignore
+    }
+
+    addToast({
+      type: 'success',
+      title: 'Quản lý kho đã nhận được vật tư!',
+      message: `Đã hoàn tất quy trình mua sắm vật tư.${generatedReceiptCode ? ` Đã tự động lập phiếu nhập ${generatedReceiptCode} và cộng tồn kho.` : ''}`
+    });
+    notifyOtherTabs('Vật tư đề xuất đã được Quản lý kho tiếp nhận và hoàn tất.');
+  }, [currentUser, settings.warehouseName, addToast, notifyOtherTabs]);
+
+  // Xóa đề xuất
+  const deletePurchaseRequest = useCallback((id: string) => {
+    setPurchaseRequests(prev => prev.filter(r => r.id !== id));
+    addToast({
+      type: 'info',
+      title: 'Đã xóa đề xuất',
+      message: 'Phiếu đề xuất mua vật tư đã được gỡ khỏi hệ thống.'
+    });
+    notifyOtherTabs('Đề xuất mua vật tư đã bị xóa.');
+  }, [addToast, notifyOtherTabs]);
+
   return (
     <InventoryContext.Provider
       value={{
@@ -938,7 +1450,21 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
         importJsonBackup,
         exportHtmlStandalone,
         resetToSampleData,
-        clearAllData
+        clearAllData,
+        googleUser,
+        googleAccessToken,
+        isGoogleConnecting,
+        signInGoogle,
+        signOutGoogle,
+        importProductsFromParsedSheet,
+        purchaseRequests,
+        createPurchaseRequest,
+        approvePurchaseRequest,
+        rejectPurchaseRequest,
+        receiveForPurchasing,
+        orderPurchaseRequest,
+        markMaterialsReceived,
+        deletePurchaseRequest
       }}
     >
       {children}

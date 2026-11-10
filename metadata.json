@@ -1,6 +1,6 @@
 {
   "name": "Hệ thống quản lý kho MM",
-  "description": "Hệ thống quản lý kho MM: Quản lý Nhập kho, Xuất kho, Báo cáo Xuất-Nhập-Tồn (XNT), quét mã vạch, in nhiệt K80/A4 và hỗ trợ đa người dùng.",
+  "description": "Hệ thống quản lý kho MM: Quản lý Nhập kho, Xuất kho, Báo cáo Xuất-Nhập-Tồn (XNT), đồng bộ Google Sheets, quét mã vạch, in nhiệt K80/A4 và hỗ trợ đa người dùng.",
   "requestFramePermissions": [
     "camera"
   ],

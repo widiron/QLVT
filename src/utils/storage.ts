@@ -4,7 +4,8 @@ import {
   Customer,
   StockReceipt,
   WarehouseSettings,
-  UserProfile
+  UserProfile,
+  PurchaseRequest
 } from '../types/inventory';
 import {
   INITIAL_PRODUCTS,
@@ -12,6 +13,7 @@ import {
   INITIAL_CUSTOMERS,
   INITIAL_SETTINGS,
   INITIAL_USERS,
+  INITIAL_PURCHASE_REQUESTS,
   generateInitialReceipts
 } from '../data/initialData';
 
@@ -23,7 +25,8 @@ const STORAGE_KEYS = {
   SETTINGS: 'khovui_settings_v1',
   USERS: 'khovui_users_v1',
   CURRENT_USER: 'khovui_current_user_v1',
-  AUTH_LOGGED_IN: 'khovui_auth_logged_in_v1'
+  AUTH_LOGGED_IN: 'khovui_auth_logged_in_v1',
+  PURCHASE_REQUESTS: 'khomm_purchase_requests_v1'
 };
 
 export interface ExportDataPayload {
@@ -78,6 +81,7 @@ export function loadStoredData() {
     const rawUsers = localStorage.getItem(STORAGE_KEYS.USERS);
     const rawCurrentUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     const rawLoggedIn = localStorage.getItem(STORAGE_KEYS.AUTH_LOGGED_IN);
+    const rawPurchaseRequests = localStorage.getItem(STORAGE_KEYS.PURCHASE_REQUESTS);
 
     let parsedUsers: UserProfile[] = INITIAL_USERS;
     if (rawUsers) {
@@ -122,6 +126,7 @@ export function loadStoredData() {
       settings: parsedSettings,
       users: parsedUsers,
       currentUser: parsedCurrentUser,
+      purchaseRequests: rawPurchaseRequests ? (JSON.parse(rawPurchaseRequests) as PurchaseRequest[]) : INITIAL_PURCHASE_REQUESTS,
       isLoggedIn: rawLoggedIn === 'true' // Mặc định false để luôn hiện màn hình đăng nhập trước khi vào
     };
   } catch (err) {
@@ -134,6 +139,7 @@ export function loadStoredData() {
       settings: INITIAL_SETTINGS,
       users: INITIAL_USERS,
       currentUser: INITIAL_USERS[0],
+      purchaseRequests: INITIAL_PURCHASE_REQUESTS,
       isLoggedIn: false
     };
   }
@@ -148,6 +154,7 @@ export function saveAllDataToStorage(data: {
   users: UserProfile[];
   currentUser?: UserProfile;
   isLoggedIn?: boolean;
+  purchaseRequests?: PurchaseRequest[];
 }) {
   try {
     localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(data.products));
@@ -156,6 +163,9 @@ export function saveAllDataToStorage(data: {
     localStorage.setItem(STORAGE_KEYS.RECEIPTS, JSON.stringify(data.receipts));
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(data.users));
+    if (data.purchaseRequests) {
+      localStorage.setItem(STORAGE_KEYS.PURCHASE_REQUESTS, JSON.stringify(data.purchaseRequests));
+    }
     if (data.currentUser) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(data.currentUser));
     }

@@ -15,7 +15,8 @@ import {
   FileCode2,
   LogOut,
   KeyRound,
-  Shield
+  Shield,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { UserProfile } from '../types/inventory';
@@ -38,7 +39,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewReceipt, onOpenNewProdu
     exportHtmlStandalone,
     logout,
     setIsChangePasswordOpen,
-    hasPermission
+    hasPermission,
+    setCurrentTab
   } = useInventory();
 
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -168,6 +170,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewReceipt, onOpenNewProdu
             <span className="hidden md:inline">Thêm hàng</span>
           </button>
         )}
+
+        {/* Nút truy cập nhanh Google Sheets */}
+        <button
+          onClick={() => setCurrentTab('sheets')}
+          className="flex items-center gap-1.5 px-2.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+          title="Đồng bộ & Quản lý Google Sheets"
+        >
+          <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+          <span className="hidden lg:inline">Google Sheets</span>
+        </button>
 
         <div className="h-6 w-px bg-slate-200 mx-1"></div>
 
