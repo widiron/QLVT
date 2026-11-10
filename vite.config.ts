@@ -5,7 +5,9 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: '/MyApp/',
+    // GitHub Pages serves this project at https://widiron.github.io/QLVT/.
+    // Vite uses this base path when generating asset URLs for production.
+    base: '/QLVT/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
